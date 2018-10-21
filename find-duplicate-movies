@@ -20,7 +20,7 @@ collect_files()
   for d in $src; do
     echo Collecting files in $d ..
     for f in $d/*; do
-      file=$(basename $f)
+      file=$(basename -a $f)
       # Skip subtitles
       if [[ $file =~ .*\.(srt|ass|ssa|sub|idx) ]]; then
         continue
@@ -43,8 +43,12 @@ collect_files()
           continue
         fi
       fi
-      # Store the file's full path and truncated name
-      baseName=$(echo $file | sed "s/.$year.*/.$year/")
+      # Remove "The." from beginning of filename
+      if [[ $VERBOSE == true ]]; then
+        file=$(echo $file | sed "s/^the.//i")
+      fi
+      # Store the file's full path and truncated base name in lowercase
+      baseName=$(echo $file | sed "s/.$year.*/.$year/" | awk '{print tolower($0)}')
       baseNameArray+=("$baseName")
       filePathArray+=("$f")
     done
@@ -55,12 +59,13 @@ print_duplicates()
 {
   echo
   echo Finding duplicates ..
-  # Find duplicates among the truncated names
+  # Find duplicates among the truncated base names
   duplicates=$(echo ${baseNameArray[@]} | awk 'BEGIN{RS=" ";} {print $1}' | sort | uniq -d)
   # Print the full path of all files matching the duplicated names
   for d in $duplicates; do
-    for f in ${filePathArray[@]}; do
-      if [[ $f == */$d* ]]; then
+    for f in "${filePathArray[@]}"; do
+      # Compare full file path in lowercase with duplicated name in lowercase
+	  if [[ ${f,,} == *$d* ]]; then
         echo $f
       fi
     done
